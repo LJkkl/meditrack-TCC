@@ -1,3 +1,5 @@
+import { NavigatorScreenParams } from '@react-navigation/native';
+
 export type MedicamentoItem = {
   id: string;
   nomeComercial: string;
@@ -25,7 +27,7 @@ export type ReceituarioForm = {
 export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
-  Menu: undefined;
+  Menu: NavigatorScreenParams<MenuTabParamList> | undefined;
   Agenda: undefined;
   EditarPerfil: undefined;
   ListarMedicamento: undefined;

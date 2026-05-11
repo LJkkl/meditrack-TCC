@@ -11,7 +11,7 @@ import { useVinculosIdoso } from '../hooks/useVinculosIdoso';
 import { RootStackParamList } from '../types/navigation';
 import { formatarDataHoraBR } from '../utils/dataHora';
 import styles, { theme } from '../estilo';
-
+//eas build --platform android --profile production --clear-cache
 type DoseAgenda = {
   id: string;
   nomeMed: string;

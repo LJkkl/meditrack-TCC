@@ -232,9 +232,9 @@ export default function EditarMedicamento() {
       await batch.commit();
       const uidLogado = auth.currentUser?.uid;
       if (uidLogado != null && uidLogado === uid) {
-        await syncDoseNotificationsForCurrentUser();
+        void syncDoseNotificationsForCurrentUser().catch(console.log);
       } else if (uidLogado != null) {
-        await syncLinkedDoseNotificationsForCurrentUser();
+        void syncLinkedDoseNotificationsForCurrentUser().catch(console.log);
       }
 
       Alert.alert("Sucesso", "Receituário ajustado com sucesso!");

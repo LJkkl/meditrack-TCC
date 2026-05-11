@@ -49,7 +49,10 @@ export default function Menu() {
   } = useVinculosIdoso();
   const { fontScale } = useTamanhoFonte();
   const insets = useSafeAreaInsets();
-  const tabIconSize = Math.max(24, fontScale.body + 4);
+  const tabIconSize = Math.min(28, Math.max(22, fontScale.body + 2));
+  const headerTitleSize = Math.min(22, Math.max(18, fontScale.sectionTitle));
+  const headerPillTextSize = Math.min(12, Math.max(10, fontScale.caption - 2));
+  const fabIconSize = Math.min(32, Math.max(26, fontScale.button + 2));
 
   const [modalUsuariosAberto, setModalUsuariosAberto] = React.useState(false);
   const [agora, setAgora] = React.useState(() => new Date());
@@ -98,6 +101,10 @@ export default function Menu() {
           headerStyle: { backgroundColor: '#002a44' },
           headerTintColor: '#fff',
           headerTitleAlign: 'center',
+          headerTitleStyle: {
+            fontSize: headerTitleSize,
+            fontWeight: '700',
+          },
           headerLeft: () => (
             <TouchableOpacity
               onPress={() => navigation.navigate('Agenda')}
@@ -109,7 +116,8 @@ export default function Menu() {
               </View>
               <View>
                 <Text
-                  style={captionText(Math.max(10, fontScale.caption - 2), '#9fcee5', {
+                  numberOfLines={1}
+                  style={captionText(headerPillTextSize, '#9fcee5', {
                     fontWeight: '700',
                     letterSpacing: 0.8,
                   })}
@@ -117,7 +125,8 @@ export default function Menu() {
                   {calendarioCabecalho.semana}
                 </Text>
                 <Text
-                  style={captionText(Math.max(11, fontScale.caption - 1), '#e7f4ff', {
+                  numberOfLines={1}
+                  style={captionText(headerPillTextSize, '#e7f4ff', {
                     fontWeight: '700',
                   })}
                 >
@@ -149,9 +158,9 @@ export default function Menu() {
                   <Icon name="users" size={14} color="#e7f4ff" iconStyle="solid" />
                   <Text
                     numberOfLines={1}
-                    style={captionText(Math.max(11, fontScale.caption - 1), '#e7f4ff', {
+                    style={captionText(headerPillTextSize, '#e7f4ff', {
                       marginLeft: 6,
-                      maxWidth: 110,
+                      maxWidth: 88,
                       fontWeight: '700',
                     })}
                   >
@@ -201,7 +210,7 @@ export default function Menu() {
                   testID={testID}
                   style={styles.menuFab}
                 >
-                  <Icon name="plus" iconStyle="solid" size={Math.max(28, fontScale.button + 4)} color="#fff" />
+                  <Icon name="plus" iconStyle="solid" size={fabIconSize} color="#fff" />
                 </TouchableOpacity>
               ),
             }}
@@ -225,7 +234,7 @@ export default function Menu() {
                   testID={testID}
                   style={styles.menuFabIdoso}
                 >
-                  <Icon name="plus" iconStyle="solid" size={Math.max(28, fontScale.button + 4)} color="#fff" />
+                  <Icon name="plus" iconStyle="solid" size={fabIconSize} color="#fff" />
                 </TouchableOpacity>
               ),
             }}

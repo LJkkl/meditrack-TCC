@@ -8,6 +8,7 @@ export class Usuario {
   public tamanhoFonte: "Pequeno" | "Medio" | "Grande";
   public idosoPodeGerenciarMedicamentos: boolean;
   public notificacoesAtivas: boolean;
+  public somNotificacao: "padrao" | "suave" | "alerta";
 
   constructor(obj?: Partial<Usuario>) {
     this.id = obj?.id ?? "";
@@ -19,6 +20,7 @@ export class Usuario {
     this.tamanhoFonte = obj?.tamanhoFonte ?? "Medio";
     this.idosoPodeGerenciarMedicamentos = obj?.idosoPodeGerenciarMedicamentos ?? false;
     this.notificacoesAtivas = obj?.notificacoesAtivas ?? true;
+    this.somNotificacao = obj?.somNotificacao ?? "padrao";
   }
 
     toString() {
@@ -31,7 +33,8 @@ export class Usuario {
             "modoInterface"  :   "${this.modoInterface}",
             "tamanhoFonte"  :   "${this.tamanhoFonte}",
             "idosoPodeGerenciarMedicamentos"  :   "${this.idosoPodeGerenciarMedicamentos}",
-            "notificacoesAtivas"  :   "${this.notificacoesAtivas}"
+            "notificacoesAtivas"  :   "${this.notificacoesAtivas}",
+            "somNotificacao"  :   "${this.somNotificacao}"
         }`
         return objeto
     }
@@ -46,7 +49,8 @@ export class Usuario {
             modoInterface: this.modoInterface,
             tamanhoFonte: this.tamanhoFonte,
             idosoPodeGerenciarMedicamentos: this.idosoPodeGerenciarMedicamentos,
-            notificacoesAtivas: this.notificacoesAtivas
+            notificacoesAtivas: this.notificacoesAtivas,
+            somNotificacao: this.somNotificacao
         }
         return usuario
     }

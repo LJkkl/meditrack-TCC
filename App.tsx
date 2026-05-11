@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { auth } from './firebase';
 import { RootStackParamList } from './types/navigation';
 import { AccessibilityModeProvider } from './context/ContextoModoAcessibilidade';
 import { FontSizeProvider } from './context/ContextoTamanhoFonte';
@@ -22,11 +23,14 @@ import MedicamentoRec from './screens/MedicamentoRec';
 import MedicamentoRes from './screens/MedicamentoRes';
 import Medicamento from './screens/Medicamento';
 import MedicamentoPer from './screens/MedicamentoPerfil';
+import { navigationRef } from './navigation/navigationRef';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export default function App() {
   const [mostrarAbertura, setMostrarAbertura] = useState(true);
+  const [authCarregado, setAuthCarregado] = useState(false);
+  const [usuarioLogado, setUsuarioLogado] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -36,18 +40,27 @@ export default function App() {
     return () => clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      setUsuarioLogado(Boolean(user));
+      setAuthCarregado(true);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   return (
     <SafeAreaProvider>
       <AccessibilityModeProvider>
         <FontSizeProvider>
           <VinculosIdosoProvider>
-            {mostrarAbertura ? (
+            {mostrarAbertura || !authCarregado ? (
               <TelaAbertura />
             ) : (
               <>
                 <GerenciadorNotificacoes />
-                <NavigationContainer>
-                  <Stack.Navigator id="root-stack">
+                <NavigationContainer ref={navigationRef}>
+                  <Stack.Navigator id="root-stack" initialRouteName={usuarioLogado ? "Menu" : "Login"}>
                     <Stack.Screen name="Login" component={Login} options={{ headerShown: false }} />
                     <Stack.Screen name="Register" component={Register} options={{ headerShown: false }} />
                     <Stack.Screen name="Menu" component={Menu} options={{ headerShown: false }} />

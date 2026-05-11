@@ -7,6 +7,7 @@ import CartaoBase from '../components/CartaoBase';
 import { useTamanhoFonte } from '../hooks/useTamanhoFonte';
 import { syncDoseNotificationsForCurrentUser, syncLinkedDoseNotificationsForCurrentUser } from '../utils/notificacoes';
 import { useVinculosIdoso } from '../hooks/useVinculosIdoso';
+import { passouDaTolerancia, TOLERANCIA_ATRASO_MS } from '../utils/doses';
 
 type DoseItem = {
   id: string;
@@ -70,7 +71,9 @@ export default function Home() {
           for (let i = 0; i < ordenadas.length - 1; i++) {
             const atual = ordenadas[i];
             const proxima = ordenadas[i + 1];
-            if (Date.now() >= ((proxima.previstoPara ?? 0) - JANELA_PERDIDA_MS)) {
+            const limitePorProximaDose = (proxima.previstoPara ?? 0) - JANELA_PERDIDA_MS;
+            const limiteComTolerancia = (atual.previstoPara ?? 0) + TOLERANCIA_ATRASO_MS;
+            if (Date.now() >= Math.max(limitePorProximaDose, limiteComTolerancia)) {
               dosesPerdidasIds.add(atual.id);
             }
           }
@@ -129,9 +132,9 @@ export default function Home() {
         });
       const uidLogado = auth.currentUser?.uid;
       if (uidLogado != null && uidLogado === uid) {
-        await syncDoseNotificationsForCurrentUser();
+        void syncDoseNotificationsForCurrentUser().catch(console.log);
       } else if (uidLogado != null) {
-        await syncLinkedDoseNotificationsForCurrentUser();
+        void syncLinkedDoseNotificationsForCurrentUser().catch(console.log);
       }
     } catch (e) {
       console.log(e);
@@ -151,7 +154,7 @@ export default function Home() {
   };
 
   const formatarAtraso = (previstoPara: number) => {
-    const diffMin = Math.max(1, Math.floor((agora - previstoPara) / 60000));
+    const diffMin = Math.max(1, Math.floor((agora - previstoPara - TOLERANCIA_ATRASO_MS) / 60000));
     if (diffMin < 60) return `${diffMin} min atrasado`;
     const h = Math.floor(diffMin / 60);
     const m = diffMin % 60;
@@ -166,7 +169,7 @@ export default function Home() {
   };
 
   const atrasadas = lista
-    .filter(item => item.status === 'pendente' && (item.previstoPara ?? 0) < agora)
+    .filter(item => item.status === 'pendente' && passouDaTolerancia(item.previstoPara ?? 0, agora))
     .slice(0, LIMITE_ATRASADAS);
 
   const proximas12h = lista

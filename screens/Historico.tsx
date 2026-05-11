@@ -8,6 +8,7 @@ import CartaoBase from '../components/CartaoBase';
 import DateTimeSelector from '../components/DateTimeSelector';
 import { useTamanhoFonte } from '../hooks/useTamanhoFonte';
 import { useVinculosIdoso } from '../hooks/useVinculosIdoso';
+import { calcularAtrasoComToleranciaMs } from '../utils/doses';
 import styles, { theme } from '../estilo';
 
 interface Dose {
@@ -72,17 +73,15 @@ export default function Historico() {
   }, [usuarioSelecionadoId]);
 
   const ATRASO_MAXIMO_MS = 2 * 60 * 60 * 1000; // 2 horas - acima disso, tratado como perdido
-  const ATRASO_MINUTOS = 30; // 30 minutos para considerar atrasado
 
   const calcularAtrasoMs = (previsto: number, tomado?: number) => {
-    if (tomado == null) return 0;
-    return tomado - previsto;
+    return calcularAtrasoComToleranciaMs(previsto, tomado);
   };
 
   const calcularStatusTomado = (previsto: number, tomado?: number) => {
     if (tomado == null) return 'Concluída';
 
-    const diff = tomado - previsto;
+    const diff = calcularAtrasoComToleranciaMs(previsto, tomado);
     if (diff <= 0) return 'No horário';
 
     const min = Math.floor(diff / (1000 * 60));
@@ -96,12 +95,6 @@ export default function Historico() {
   const dosesTomadas = doses
     .filter((dose) => dose.status === 'tomado' && calcularAtrasoMs(dose.previstoPara, dose.tomadoEm) <= ATRASO_MAXIMO_MS)
     .sort((a, b) => (b.tomadoEm ?? 0) - (a.tomadoEm ?? 0));
-
-  const dosesTomadasAtrasadas = dosesTomadas.filter((dose) => {
-    const diff = (dose.tomadoEm ?? 0) - dose.previstoPara;
-    const minutos = Math.floor(diff / (1000 * 60));
-    return minutos >= ATRASO_MINUTOS;
-  });
 
   const dosesPerdidas = doses
     .filter((dose) => dose.status === 'perdido' || (dose.status === 'tomado' && calcularAtrasoMs(dose.previstoPara, dose.tomadoEm) > ATRASO_MAXIMO_MS))
@@ -152,7 +145,7 @@ export default function Historico() {
 
     try {
       const novoTomadoEm = dataHoraEdicao.getTime();
-      const atraso = novoTomadoEm - doseEmEdicao.previstoPara;
+      const atraso = calcularAtrasoComToleranciaMs(doseEmEdicao.previstoPara, novoTomadoEm);
       
       // Se atraso > ATRASO_MAXIMO_MS, marca como perdido, senão marca como tomado
       const novoStatus = atraso > ATRASO_MAXIMO_MS ? 'perdido' : 'tomado';

@@ -2,6 +2,8 @@ import firebase from "firebase/compat/app";
 import "firebase/compat/auth";
 import "firebase/compat/firestore";
 import "firebase/compat/storage";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { getAuth, getReactNativePersistence, initializeAuth } from "firebase/auth";
 
 // COLAR AQUI A STRING DE CONEXÃO
 const firebaseConfig = {
@@ -21,6 +23,14 @@ if (firebase.apps.length == 0) {
     app = firebase.initializeApp(firebaseConfig);
 } else {
     app = firebase.app();
+}
+
+try {
+    initializeAuth(app._delegate, {
+        persistence: getReactNativePersistence(AsyncStorage),
+    });
+} catch (error) {
+    getAuth(app._delegate);
 }
 
 const auth = firebase.auth();

@@ -146,9 +146,9 @@ export default function PerfilMedicamento() {
               await batch.commit();
               const uidLogado = auth.currentUser?.uid;
               if (uidLogado != null && uidLogado === uid) {
-                await syncDoseNotificationsForCurrentUser();
+                void syncDoseNotificationsForCurrentUser().catch(console.log);
               } else if (uidLogado != null) {
-                await syncLinkedDoseNotificationsForCurrentUser();
+                void syncLinkedDoseNotificationsForCurrentUser().catch(console.log);
               }
 
               Alert.alert("Sucesso", "Medicamento apagado com sucesso.");

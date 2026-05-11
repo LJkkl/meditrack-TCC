@@ -115,9 +115,9 @@ export default function MedicamentoRes() {
 
       const uidLogado = auth.currentUser?.uid;
       if (uidLogado != null && uidLogado === uid) {
-        await syncDoseNotificationsForCurrentUser();
+        void syncDoseNotificationsForCurrentUser().catch(console.log);
       } else if (uidLogado != null) {
-        await syncLinkedDoseNotificationsForCurrentUser();
+        void syncLinkedDoseNotificationsForCurrentUser().catch(console.log);
       }
 
       Alert.alert('Sucesso', 'Receituário salvo com sucesso.');

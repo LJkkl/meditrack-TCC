@@ -29,8 +29,10 @@ export default function IdosoPerfil({ navigation }: Props) {
     gerarNovoCodigo,
     idosoPodeGerenciarMedicamentos,
     notificacoesAtivas,
+    somNotificacao,
     atualizarPermissaoGerenciarMedicamentos,
     atualizarNotificacoesAtivas,
+    atualizarSomNotificacao,
   } = useVinculosIdoso();
   const { fontScale, selectedFontSize, setSelectedFontSize } = useTamanhoFonte();
   const [gerandoCodigo, setGerandoCodigo] = useState(false);
@@ -104,6 +106,35 @@ export default function IdosoPerfil({ navigation }: Props) {
       }
     } catch (error: any) {
       Alert.alert('Erro', error?.message || 'Não foi possível atualizar as notificações.');
+    } finally {
+      setSalvandoNotificacoes(false);
+    }
+  };
+
+  const atualizarSom = async (som: 'padrao' | 'suave' | 'alerta') => {
+    try {
+      setSalvandoNotificacoes(true);
+
+      if (!notificacoesSuportadas()) {
+        Alert.alert('Indisponível', 'A escolha de som vale para a build instalada no aparelho.');
+        return;
+      }
+
+      if (notificacoesAtivas) {
+        const granted = await ensureNotificationPermissionsAsync();
+        if (!granted) {
+          Alert.alert('Permissão necessária', 'Ative a permissão de notificações no aparelho para continuar.');
+          return;
+        }
+      }
+
+      await atualizarSomNotificacao(som);
+
+      if (notificacoesAtivas) {
+        await syncAllNotificationsForCurrentUser();
+      }
+    } catch (error: any) {
+      Alert.alert('Erro', error?.message || 'Não foi possível atualizar o som.');
     } finally {
       setSalvandoNotificacoes(false);
     }
@@ -213,6 +244,32 @@ export default function IdosoPerfil({ navigation }: Props) {
         <Text style={{ color: theme.colors.textMuted, fontSize: fontScale.caption, marginTop: 12 }}>
           Status: {notificacoesAtivas ? 'Ativas' : 'Desativadas'}
         </Text>
+
+        <Text style={{ color: theme.colors.textMuted, fontSize: fontScale.body, marginTop: 16, lineHeight: 24 }}>
+          Som do lembrete
+        </Text>
+
+        <View style={styles.idosoSegmented}>
+          {([
+            ['padrao', 'Padrao'],
+            ['suave', 'Suave'],
+            ['alerta', 'Alerta'],
+          ] as const).map(([valor, label]) => {
+            const selecionado = somNotificacao === valor;
+            return (
+              <TouchableOpacity
+                key={valor}
+                disabled={salvandoNotificacoes}
+                onPress={() => atualizarSom(valor)}
+                style={[styles.idosoSegmentedButton, { backgroundColor: selecionado ? theme.colors.accent : 'transparent' }]}
+              >
+                <Text style={{ color: selecionado ? theme.colors.textInverse : '#29576d', fontWeight: '700', fontSize: 18 }}>
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
       </CartaoBase>
 
       <CartaoBase style={[styles.idosoCard, { marginBottom: 14 }]}>

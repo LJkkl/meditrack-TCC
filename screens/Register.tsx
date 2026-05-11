@@ -89,6 +89,7 @@ export default function Register() {
         tamanhoFonte: 'Medio',
         idosoPodeGerenciarMedicamentos: tipoConta === 'idoso' ? idosoPodeGerenciarMedicamentos : false,
         notificacoesAtivas: true,
+        somNotificacao: 'padrao',
       });
 
       navigation.navigate('Menu');

@@ -3,6 +3,7 @@ import firebase from "firebase/compat/app";
 import { auth, firestore } from "../firebase";
 
 type TipoUsuario = "idoso" | "normal";
+type SomNotificacao = "padrao" | "suave" | "alerta";
 
 type Vinculado = {
   id: string;
@@ -15,6 +16,7 @@ type ContextoVinculos = {
   codigoVinculo: string;
   idosoPodeGerenciarMedicamentos: boolean;
   notificacoesAtivas: boolean;
+  somNotificacao: SomNotificacao;
   usuarioSelecionadoId: string | null;
   usuarioSelecionadoNome: string;
   visualizandoVinculado: boolean;
@@ -25,6 +27,7 @@ type ContextoVinculos = {
   desvincularIdoso: (idosoId: string) => Promise<void>;
   atualizarPermissaoGerenciarMedicamentos: (permitir: boolean) => Promise<void>;
   atualizarNotificacoesAtivas: (ativas: boolean) => Promise<void>;
+  atualizarSomNotificacao: (som: SomNotificacao) => Promise<void>;
 };
 
 const VinculosContext = createContext<ContextoVinculos | undefined>(undefined);
@@ -37,6 +40,7 @@ export function VinculosIdosoProvider({ children }: { children: React.ReactNode 
   const [codigoVinculo, setCodigoVinculo] = useState("");
   const [idosoPodeGerenciarMedicamentos, setIdosoPodeGerenciarMedicamentos] = useState(false);
   const [notificacoesAtivas, setNotificacoesAtivas] = useState(true);
+  const [somNotificacao, setSomNotificacao] = useState<SomNotificacao>("padrao");
   const [usuarioLogadoId, setUsuarioLogadoId] = useState<string | null>(null);
   const [usuarioSelecionadoId, setUsuarioSelecionadoId] = useState<string | null>(null);
   const [usuarioSelecionadoNome, setUsuarioSelecionadoNome] = useState("Minha conta");
@@ -90,6 +94,13 @@ export function VinculosIdosoProvider({ children }: { children: React.ReactNode 
         setTipoUsuario(tipo);
         setIdosoPodeGerenciarMedicamentos(data.idosoPodeGerenciarMedicamentos === true);
         setNotificacoesAtivas(data.notificacoesAtivas !== false);
+        const somSalvo = data.somNotificacao;
+        if (somSalvo === "suave" || somSalvo === "alerta" || somSalvo === "padrao") {
+          setSomNotificacao(somSalvo);
+        } else {
+          setSomNotificacao("padrao");
+          await refPerfil.set({ somNotificacao: "padrao" }, { merge: true });
+        }
 
         const codigoAtual = data.codigoVinculo;
         if (typeof codigoAtual === "string" && codigoAtual.trim().length >= 4) {
@@ -212,6 +223,18 @@ export function VinculosIdosoProvider({ children }: { children: React.ReactNode 
     setNotificacoesAtivas(ativas);
   };
 
+  const atualizarSomNotificacao = async (som: SomNotificacao) => {
+    const uid = auth.currentUser?.uid;
+    if (uid == null) throw new Error("Usuario nao autenticado.");
+
+    await firestore
+      .collection("Usuario")
+      .doc(uid)
+      .set({ somNotificacao: som }, { merge: true });
+
+    setSomNotificacao(som);
+  };
+
   const desvincularIdoso = async (idosoId: string) => {
     const uid = auth.currentUser?.uid;
     if (uid == null) throw new Error("Usuario nao autenticado.");
@@ -242,6 +265,7 @@ export function VinculosIdosoProvider({ children }: { children: React.ReactNode 
       codigoVinculo,
       idosoPodeGerenciarMedicamentos,
       notificacoesAtivas,
+      somNotificacao,
       usuarioSelecionadoId,
       usuarioSelecionadoNome,
       visualizandoVinculado,
@@ -252,6 +276,7 @@ export function VinculosIdosoProvider({ children }: { children: React.ReactNode 
       desvincularIdoso,
       atualizarPermissaoGerenciarMedicamentos,
       atualizarNotificacoesAtivas,
+      atualizarSomNotificacao,
     };
   }, [
     loading,
@@ -259,6 +284,7 @@ export function VinculosIdosoProvider({ children }: { children: React.ReactNode 
     codigoVinculo,
     idosoPodeGerenciarMedicamentos,
     notificacoesAtivas,
+    somNotificacao,
     usuarioSelecionadoId,
     usuarioSelecionadoNome,
     usuarioLogadoId,

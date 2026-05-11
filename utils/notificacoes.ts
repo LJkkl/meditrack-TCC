@@ -1,6 +1,9 @@
 import { Platform } from "react-native";
 import Constants from "expo-constants";
 import { auth, firestore } from "../firebase";
+import { TOLERANCIA_ATRASO_MS } from "./doses";
+
+export type NotificationSoundPreference = "padrao" | "suave" | "alerta";
 
 type DoseNotificationData = {
   source: "dose_reminder";
@@ -27,7 +30,14 @@ type NotificationsModule = typeof import("expo-notifications");
 let notificationsModule: NotificationsModule | null | undefined;
 const MARGEM_REAGENDAMENTO_MS = 15000;
 const DISPARO_MINIMO_A_PARTIR_DE_AGORA_MS = 2000;
-const ATRASO_AVISO_VINCULADO_MS = 5 * 60 * 1000;
+const ATRASO_AVISO_VINCULADO_MS = TOLERANCIA_ATRASO_MS;
+const MAX_DOSES_AGENDADAS = 64;
+const REFORCOS_LEMBRETE_MS = [0, TOLERANCIA_ATRASO_MS, 6 * 60 * 1000, 9 * 60 * 1000];
+const SOUND_CONFIG: Record<NotificationSoundPreference, { channelId: string; sound: "default" | "notificacao_suave.wav" | "notificacao_alerta.wav" }> = {
+  padrao: { channelId: "medicamentos-padrao-v2", sound: "default" },
+  suave: { channelId: "medicamentos-suave-v2", sound: "notificacao_suave.wav" },
+  alerta: { channelId: "medicamentos-alerta-v2", sound: "notificacao_alerta.wav" },
+};
 
 function isExpoGo() {
   return Constants.appOwnership === "expo";
@@ -36,6 +46,12 @@ function isExpoGo() {
 async function notificationsEnabledForUser(uid: string) {
   const doc = await firestore.collection("Usuario").doc(uid).get();
   return doc.data()?.notificacoesAtivas !== false;
+}
+
+async function notificationSoundForUser(uid: string): Promise<NotificationSoundPreference> {
+  const doc = await firestore.collection("Usuario").doc(uid).get();
+  const value = doc.data()?.somNotificacao;
+  return value === "suave" || value === "alerta" || value === "padrao" ? value : "padrao";
 }
 
 function getNotificationsModule(): NotificationsModule | null {
@@ -57,6 +73,7 @@ function getNotificationsModule(): NotificationsModule | null {
         shouldShowList: true,
         shouldPlaySound: true,
         shouldSetBadge: false,
+        priority: Notifications.AndroidNotificationPriority.MAX,
       }),
     });
 
@@ -102,13 +119,25 @@ async function ensureNotificationChannelAsync() {
     return;
   }
 
-  await Notifications.setNotificationChannelAsync("medicamentos", {
-    name: "Lembretes de medicamentos",
-    importance: Notifications.AndroidImportance.HIGH,
-    vibrationPattern: [0, 250, 250, 250],
-    lightColor: "#0b3954",
-    sound: "default",
-  });
+  await Promise.all(
+    (Object.entries(SOUND_CONFIG) as Array<[NotificationSoundPreference, { channelId: string; sound: "default" | "notificacao_suave.wav" | "notificacao_alerta.wav" }]>).map(
+      async ([key, config]) => {
+        await Notifications.setNotificationChannelAsync(config.channelId, {
+          name: `Lembretes de medicamentos - ${key}`,
+          importance: Notifications.AndroidImportance.MAX,
+          vibrationPattern: [0, 700, 250, 700, 250, 700],
+          lightColor: "#0b3954",
+          lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+          bypassDnd: true,
+          audioAttributes: {
+            usage: Notifications.AndroidAudioUsage.ALARM,
+            contentType: Notifications.AndroidAudioContentType.SONIFICATION,
+          },
+          sound: config.sound,
+        });
+      }
+    )
+  );
 }
 
 function isDoseReminder(data: unknown): data is DoseNotificationData {
@@ -152,7 +181,8 @@ async function getPendingDoseDocs(uid: string) {
       }),
     }))
     .filter((item) => (item.previstoPara ?? 0) >= Date.now() - MARGEM_REAGENDAMENTO_MS)
-    .sort((a, b) => (a.previstoPara ?? 0) - (b.previstoPara ?? 0));
+    .sort((a, b) => (a.previstoPara ?? 0) - (b.previstoPara ?? 0))
+    .slice(0, MAX_DOSES_AGENDADAS);
 }
 
 async function cancelScheduledDoseNotificationsForUser(uid: string) {
@@ -235,15 +265,24 @@ export async function syncDoseNotificationsForUser(uid?: string) {
   }
 
   const pendentes = await getPendingDoseDocs(resolvedUid);
+  const soundPreference = await notificationSoundForUser(resolvedUid);
+  const soundConfig = SOUND_CONFIG[soundPreference];
   await cancelScheduledDoseNotificationsForUser(resolvedUid);
 
   await Promise.all(
-    pendentes.map((dose) =>
-      Notifications.scheduleNotificationAsync({
+    pendentes.flatMap((dose) =>
+      REFORCOS_LEMBRETE_MS.map((offsetMs) => Notifications.scheduleNotificationAsync({
         content: {
-          title: "Hora do medicamento",
-          body: `${dose.nomeMed} precisa ser tomado agora.`,
-          sound: "default",
+          title: offsetMs === 0 ? "Hora do medicamento" : "Lembrete de medicamento",
+          body: offsetMs === 0
+            ? `${dose.nomeMed} precisa ser tomado agora.`
+            : `${dose.nomeMed} ainda nao foi registrado. Confira a dose.`,
+          sound: soundConfig.sound,
+          priority: Notifications.AndroidNotificationPriority.MAX,
+          vibrate: [0, 700, 250, 700, 250, 700],
+          autoDismiss: false,
+          sticky: offsetMs > 0,
+          interruptionLevel: "timeSensitive",
           data: {
             source: "dose_reminder",
             uid: resolvedUid,
@@ -255,10 +294,10 @@ export async function syncDoseNotificationsForUser(uid?: string) {
         },
         trigger: {
           type: Notifications.SchedulableTriggerInputTypes.DATE,
-          date: new Date(Math.max(dose.previstoPara, Date.now() + DISPARO_MINIMO_A_PARTIR_DE_AGORA_MS)),
-          channelId: Platform.OS === "android" ? "medicamentos" : undefined,
+          date: new Date(Math.max(dose.previstoPara + offsetMs, Date.now() + DISPARO_MINIMO_A_PARTIR_DE_AGORA_MS)),
+          channelId: Platform.OS === "android" ? soundConfig.channelId : undefined,
         },
-      })
+      }))
     )
   );
 }
@@ -286,6 +325,8 @@ export async function syncLinkedDoseNotificationsForUser(caregiverUid?: string) 
   }
 
   const vinculados = await getLinkedElderlyForCaregiver(resolvedUid);
+  const soundPreference = await notificationSoundForUser(resolvedUid);
+  const soundConfig = SOUND_CONFIG[soundPreference];
   await cancelScheduledLinkedDoseNotificationsForCaregiver(resolvedUid);
 
   const notificacoes = await Promise.all(
@@ -304,7 +345,10 @@ export async function syncLinkedDoseNotificationsForUser(caregiverUid?: string) 
         content: {
           title: `Dose de ${vinculado.nome}`,
           body: `${dose.nomeMed} pode estar atrasado. Verifique o tratamento.`,
-          sound: "default",
+          sound: soundConfig.sound,
+          priority: Notifications.AndroidNotificationPriority.MAX,
+          vibrate: [0, 700, 250, 700],
+          interruptionLevel: "timeSensitive",
           data: {
             source: "linked_dose_reminder",
             caregiverUid: resolvedUid,
@@ -324,7 +368,7 @@ export async function syncLinkedDoseNotificationsForUser(caregiverUid?: string) 
               Date.now() + DISPARO_MINIMO_A_PARTIR_DE_AGORA_MS
             )
           ),
-          channelId: Platform.OS === "android" ? "medicamentos" : undefined,
+          channelId: Platform.OS === "android" ? soundConfig.channelId : undefined,
         },
       })
     )

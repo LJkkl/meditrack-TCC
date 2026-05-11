@@ -66,7 +66,9 @@ export default function Perfil({ navigation }: PerfilProps) {
     gerarNovoCodigo,
     vinculados,
     notificacoesAtivas,
+    somNotificacao,
     atualizarNotificacoesAtivas,
+    atualizarSomNotificacao,
   } = useVinculosIdoso();
 
   const [userData, setUserData] = useState<UserData>({
@@ -110,6 +112,7 @@ export default function Perfil({ navigation }: PerfilProps) {
             modoInterface: "normal",
             tamanhoFonte: "Medio",
             notificacoesAtivas: true,
+            somNotificacao: "padrao",
             fotoUrl: "",
           };
 
@@ -164,7 +167,7 @@ export default function Perfil({ navigation }: PerfilProps) {
     try {
       setVinculando(true);
       const vinculado = await vincularPorCodigo(codigo);
-      await syncLinkedDoseNotificationsForCurrentUser();
+      void syncLinkedDoseNotificationsForCurrentUser().catch(console.log);
       setCodigoParaVincular("");
       Alert.alert("Vinculo criado", `Agora voce pode visualizar ${vinculado.nome} na Home.`);
     } catch (error: any) {
@@ -214,6 +217,35 @@ export default function Perfil({ navigation }: PerfilProps) {
       }
     } catch (error: any) {
       Alert.alert("Erro", error?.message || "Nao foi possivel atualizar as notificacoes.");
+    } finally {
+      setSalvandoNotificacoes(false);
+    }
+  };
+
+  const atualizarSom = async (som: "padrao" | "suave" | "alerta") => {
+    try {
+      setSalvandoNotificacoes(true);
+
+      if (!notificacoesSuportadas()) {
+        Alert.alert("Indisponivel", "A escolha de som vale para a build instalada no aparelho.");
+        return;
+      }
+
+      if (notificacoesAtivas) {
+        const granted = await ensureNotificationPermissionsAsync();
+        if (!granted) {
+          Alert.alert("Permissao necessaria", "Ative a permissao de notificacoes no aparelho para continuar.");
+          return;
+        }
+      }
+
+      await atualizarSomNotificacao(som);
+
+      if (notificacoesAtivas) {
+        await syncAllNotificationsForCurrentUser();
+      }
+    } catch (error: any) {
+      Alert.alert("Erro", error?.message || "Nao foi possivel atualizar o som.");
     } finally {
       setSalvandoNotificacoes(false);
     }
@@ -400,6 +432,34 @@ export default function Perfil({ navigation }: PerfilProps) {
 
               <Text style={bodyText(fontScale.caption, "#4d7182", { marginTop: 12 })}>
                 Status: {notificacoesAtivas ? "Ativas" : "Desativadas"}
+              </Text>
+
+              <Text style={bodyText(fontScale.caption, "#5e7b89", { marginTop: 16, lineHeight: 20 })}>
+                Som do lembrete
+              </Text>
+
+              <View style={styles.settingsSegmented}>
+                {([
+                  ["padrao", "Padrao"],
+                  ["suave", "Suave"],
+                  ["alerta", "Alerta"],
+                ] as const).map(([valor, label]) => {
+                  const selecionado = somNotificacao === valor;
+                  return (
+                    <TouchableOpacity
+                      key={valor}
+                      disabled={salvandoNotificacoes}
+                      onPress={() => atualizarSom(valor)}
+                      style={segmentedButton(selecionado)}
+                    >
+                      <Text style={segmentedButtonText(selecionado, 15)}>{label}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <Text style={bodyText(fontScale.caption, "#4d7182", { marginTop: 12 })}>
+                Som selecionado: {somNotificacao === "padrao" ? "Padrao" : somNotificacao === "suave" ? "Suave" : "Alerta"}
               </Text>
             </View>
 

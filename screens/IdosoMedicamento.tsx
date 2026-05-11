@@ -115,7 +115,7 @@ export default function IdosoMedicamento() {
         });
       }
       await historicoBatch.commit();
-      await syncDoseNotificationsForCurrentUser();
+      void syncDoseNotificationsForCurrentUser().catch(console.log);
 
       Alert.alert('Sucesso', 'Medicamento e receituário salvos.');
       limpar();

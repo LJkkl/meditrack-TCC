@@ -6,6 +6,7 @@ import TelaBaseIdoso from "../components/idoso/TelaBaseIdoso";
 import CartaoBase from "../components/CartaoBase";
 import { useTamanhoFonte } from "../hooks/useTamanhoFonte";
 import { syncDoseNotificationsForCurrentUser } from "../utils/notificacoes";
+import { passouDaTolerancia } from "../utils/doses";
 import styles, { theme } from "../estilo";
 
 type DoseItem = {
@@ -88,6 +89,11 @@ export default function IdosoHome() {
     return agora >= doseAtual.previstoPara;
   }, [agora, doseAtual]);
 
+  const estaAtrasada = useMemo(() => {
+    if (!doseAtual) return false;
+    return passouDaTolerancia(doseAtual.previstoPara, agora);
+  }, [agora, doseAtual]);
+
   const proximaDose = useMemo(() => {
     if (!doseAtual) return null;
     return doses[1] ?? null;
@@ -107,7 +113,7 @@ export default function IdosoHome() {
           status: "tomado",
           tomadoEm: Date.now(),
         });
-      await syncDoseNotificationsForCurrentUser();
+      void syncDoseNotificationsForCurrentUser().catch(console.log);
     } catch {
       Alert.alert("Erro", "Não foi possível registrar a dose agora.");
     }
@@ -126,11 +132,18 @@ export default function IdosoHome() {
             </Text>
 
             {podeTomarAgora ? (
-              <TouchableOpacity onPress={marcarComoTomado} style={styles.idosoLargeButton}>
-                <Text style={{ color: theme.colors.textInverse, fontSize: fontScale.button + 2, fontWeight: "700" }}>
-                  Ja tomei
-                </Text>
-              </TouchableOpacity>
+              <>
+                {estaAtrasada && (
+                  <Text style={{ color: "#b85c00", fontSize: fontScale.body, marginTop: 10, fontWeight: "700" }}>
+                    Passou do horario.
+                  </Text>
+                )}
+                <TouchableOpacity onPress={marcarComoTomado} style={styles.idosoLargeButton}>
+                  <Text style={{ color: theme.colors.textInverse, fontSize: fontScale.button + 2, fontWeight: "700" }}>
+                    Ja tomei
+                  </Text>
+                </TouchableOpacity>
+              </>
             ) : (
               <View style={styles.idosoSoftPanel}>
                 <Text style={{ color: "#24505b", fontSize: fontScale.sectionTitle, fontWeight: "700", textAlign: "center" }}>
