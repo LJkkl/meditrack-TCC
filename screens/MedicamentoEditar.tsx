@@ -31,11 +31,18 @@ export default function EditarMedicamento() {
   const [dataSelecionada, setDataSelecionada] = useState(new Date());
 
   const [receituarioId, setReceituarioId] = useState('');
+  const [idosoPodeEditarExcluir, setIdosoPodeEditarExcluir] = useState(false);
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
 
   const { fontScale } = useTamanhoFonte();
-  const { usuarioSelecionadoId, usuarioSelecionadoNome, visualizandoVinculado } = useVinculosIdoso();
+  const {
+    usuarioSelecionadoId,
+    usuarioSelecionadoNome,
+    visualizandoVinculado,
+    tipoUsuario,
+  } = useVinculosIdoso();
+  const podeEditarExcluir = tipoUsuario !== 'idoso' || idosoPodeEditarExcluir;
 
   // 🔥 BUSCAR DADOS CERTOS
   useEffect(() => {
@@ -53,6 +60,7 @@ export default function EditarMedicamento() {
           setNome(data?.nomeComercial || '');
           setTipo(data?.tipoApresentacao || '');
           setPrincipio(data?.principioAtivo || '');
+          setIdosoPodeEditarExcluir(data?.idosoPodeEditarExcluir === true);
         }
 
         // RECEITUARIO
@@ -117,6 +125,11 @@ export default function EditarMedicamento() {
     const uid = usuarioSelecionadoId;
     if (!uid || !medId) return;
 
+    if (!podeEditarExcluir) {
+      Alert.alert('Bloqueado', 'A edição de medicamentos está desativada nesta conta.');
+      return;
+    }
+
     const qtdTotal = parseInt(quantidadeDoses, 10);
     const intervalo = parseInt(intervaloHoras, 10);
 
@@ -140,6 +153,8 @@ export default function EditarMedicamento() {
         nomeComercial: nome.trim(),
         tipoApresentacao: tipo.trim(),
         principioAtivo: principio.trim()
+        ,
+        idosoPodeEditarExcluir: visualizandoVinculado ? idosoPodeEditarExcluir : true
       });
 
       // 2) Atualiza ou cria receituário
@@ -330,6 +345,32 @@ export default function EditarMedicamento() {
           <TextInput label="Dose" value={dose} onChangeText={setDose} style={{ marginBottom: 12, backgroundColor: '#ffffff' }} contentStyle={{ fontSize: fontScale.body }} activeUnderlineColor="#0b3954" />
           <TextInput label="Quantidade de doses" value={quantidadeDoses} onChangeText={setQuantidadeDoses} keyboardType="numeric" style={{ marginBottom: 12, backgroundColor: '#ffffff' }} contentStyle={{ fontSize: fontScale.body }} activeUnderlineColor="#0b3954" />
           <TextInput label="Intervalo (h)" value={intervaloHoras} onChangeText={setIntervaloHoras} keyboardType="numeric" style={{ marginBottom: 16, backgroundColor: '#ffffff' }} contentStyle={{ fontSize: fontScale.body }} activeUnderlineColor="#0b3954" />
+
+          {visualizandoVinculado && (
+            <View style={{ marginBottom: 16, backgroundColor: '#eef7fa', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#dceaf0' }}>
+              <Text style={{ color: '#12384c', fontSize: fontScale.body, fontWeight: '700' }}>
+                Idoso pode editar ou excluir este remédio?
+              </Text>
+              <View style={{ flexDirection: 'row', marginTop: 12, backgroundColor: '#dceef4', borderRadius: 12, padding: 5 }}>
+                <TouchableOpacity
+                  onPress={() => setIdosoPodeEditarExcluir(true)}
+                  style={{ flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 9, backgroundColor: idosoPodeEditarExcluir ? '#0b3954' : 'transparent' }}
+                >
+                  <Text style={{ color: idosoPodeEditarExcluir ? '#fff' : '#29576d', fontSize: fontScale.button, fontWeight: '700' }}>
+                    Permitir
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setIdosoPodeEditarExcluir(false)}
+                  style={{ flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 9, backgroundColor: !idosoPodeEditarExcluir ? '#0b3954' : 'transparent' }}
+                >
+                  <Text style={{ color: !idosoPodeEditarExcluir ? '#fff' : '#29576d', fontSize: fontScale.button, fontWeight: '700' }}>
+                    Bloquear
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
 
           <View
             style={{

@@ -15,6 +15,7 @@ type MedicamentoItem = {
   nomeComercial: string;
   tipoApresentacao?: string;
   principioAtivo?: string;
+  idosoPodeEditarExcluir?: boolean;
 };
 
 type ReceituarioItem = {
@@ -145,6 +146,18 @@ export default function IdosoMedicamentoListar() {
                 </Text>
               )}
             </View>
+
+            {medicamento.idosoPodeEditarExcluir === true && (
+              <TouchableOpacity
+                onPress={() => navigation.navigate('MedicamentoPer', { medicamento })}
+                style={[styles.idosoPrimaryButton, { marginTop: 12 }]}
+              >
+                <Icon name="pen-to-square" size={16} color={theme.colors.textInverse} iconStyle="solid" />
+                <Text style={{ color: theme.colors.textInverse, fontSize: fontScale.button, fontWeight: '700', marginLeft: 10 }}>
+                  Editar ou excluir
+                </Text>
+              </TouchableOpacity>
+            )}
           </CartaoBase>
         );
       })}

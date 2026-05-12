@@ -88,6 +88,7 @@ export default function Register() {
         modoInterface: tipoConta === 'idoso' ? 'idoso' : 'normal',
         tamanhoFonte: 'Medio',
         idosoPodeGerenciarMedicamentos: tipoConta === 'idoso' ? idosoPodeGerenciarMedicamentos : false,
+        idosoPodeEditarExcluirMedicamentos: false,
         notificacoesAtivas: true,
         somNotificacao: 'padrao',
       });

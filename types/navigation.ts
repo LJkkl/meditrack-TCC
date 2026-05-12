@@ -7,6 +7,7 @@ export type MedicamentoItem = {
   principioAtivo: string;
   foto?: string;
   criadoEm?: number;
+  idosoPodeEditarExcluir?: boolean;
 };
 
 export type MedicamentoBuscaItem = {
@@ -15,6 +16,7 @@ export type MedicamentoBuscaItem = {
   tipo?: string;
   principio?: string;
   foto?: string;
+  idosoPodeEditarExcluir?: boolean;
 };
 
 export type ReceituarioForm = {
@@ -22,6 +24,7 @@ export type ReceituarioForm = {
   intervaloHoras: string;
   quantidadeDoses: string;
   dataInicio: number;
+  idosoPodeEditarExcluir?: boolean;
 };
 
 export type RootStackParamList = {

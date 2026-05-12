@@ -22,6 +22,7 @@ export default function MedicamentoRec() {
   const [intervaloHoras, setIntervaloHoras] = useState('');
   const [quantidadeDoses, setQuantidadeDoses] = useState('');
   const [data, setData] = useState(new Date());
+  const [idosoPodeEditarExcluir, setIdosoPodeEditarExcluir] = useState(false);
 
   const [busca, setBusca] = useState('');
   const [resultados, setResultados] = useState<MedicamentoBuscaItem[]>([]);
@@ -56,7 +57,8 @@ export default function MedicamentoRec() {
             nome: data.nomeComercial, // 🔥 padroniza
             tipo: data.tipoApresentacao,
             principio: data.principioAtivo,
-            foto: data.foto
+            foto: data.foto,
+            idosoPodeEditarExcluir: data.idosoPodeEditarExcluir === true
           };
         });
 
@@ -79,7 +81,8 @@ export default function MedicamentoRec() {
         dose,
         intervaloHoras,
         quantidadeDoses,
-        dataInicio: data.getTime()
+        dataInicio: data.getTime(),
+        idosoPodeEditarExcluir: visualizandoVinculado ? idosoPodeEditarExcluir : true
       }
     });
   };
@@ -131,6 +134,7 @@ export default function MedicamentoRec() {
                 onPress={() => {
                   setBusca(item.nome);
                   setMedSelecionado(item); // 🔥 agora correto
+                  setIdosoPodeEditarExcluir(item.idosoPodeEditarExcluir === true);
                   setMostrarLista(false);
                 }}
                 style={{
@@ -178,6 +182,35 @@ export default function MedicamentoRec() {
         mode="datetime"
         minimumDate={new Date()}
       />
+
+      {visualizandoVinculado && (
+        <View style={{ marginTop: 12, backgroundColor: '#eef7fa', borderRadius: 14, padding: 14, borderWidth: 1, borderColor: '#dceaf0' }}>
+          <Text style={{ color: '#12384c', fontSize: fontScale.body, fontWeight: '700' }}>
+            Idoso pode editar ou excluir este remédio?
+          </Text>
+          <Text style={{ color: '#5f7f92', fontSize: fontScale.caption, marginTop: 6 }}>
+            Essa permissão será salva junto da prescrição deste medicamento.
+          </Text>
+          <View style={{ flexDirection: 'row', marginTop: 12, backgroundColor: '#dceef4', borderRadius: 12, padding: 5 }}>
+            <TouchableOpacity
+              onPress={() => setIdosoPodeEditarExcluir(true)}
+              style={{ flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 9, backgroundColor: idosoPodeEditarExcluir ? '#0b3954' : 'transparent' }}
+            >
+              <Text style={{ color: idosoPodeEditarExcluir ? '#fff' : '#29576d', fontSize: fontScale.button, fontWeight: '700' }}>
+                Permitir
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setIdosoPodeEditarExcluir(false)}
+              style={{ flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 9, backgroundColor: !idosoPodeEditarExcluir ? '#0b3954' : 'transparent' }}
+            >
+              <Text style={{ color: !idosoPodeEditarExcluir ? '#fff' : '#29576d', fontSize: fontScale.button, fontWeight: '700' }}>
+                Bloquear
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       <TouchableOpacity
         onPress={avancar}

@@ -7,6 +7,7 @@ export class Usuario {
   public modoInterface: "normal" | "idoso";
   public tamanhoFonte: "Pequeno" | "Medio" | "Grande";
   public idosoPodeGerenciarMedicamentos: boolean;
+  public idosoPodeEditarExcluirMedicamentos: boolean;
   public notificacoesAtivas: boolean;
   public somNotificacao: "padrao" | "suave" | "alerta";
 
@@ -19,6 +20,7 @@ export class Usuario {
     this.modoInterface = obj?.modoInterface ?? "normal";
     this.tamanhoFonte = obj?.tamanhoFonte ?? "Medio";
     this.idosoPodeGerenciarMedicamentos = obj?.idosoPodeGerenciarMedicamentos ?? false;
+    this.idosoPodeEditarExcluirMedicamentos = obj?.idosoPodeEditarExcluirMedicamentos ?? false;
     this.notificacoesAtivas = obj?.notificacoesAtivas ?? true;
     this.somNotificacao = obj?.somNotificacao ?? "padrao";
   }
@@ -33,6 +35,7 @@ export class Usuario {
             "modoInterface"  :   "${this.modoInterface}",
             "tamanhoFonte"  :   "${this.tamanhoFonte}",
             "idosoPodeGerenciarMedicamentos"  :   "${this.idosoPodeGerenciarMedicamentos}",
+            "idosoPodeEditarExcluirMedicamentos"  :   "${this.idosoPodeEditarExcluirMedicamentos}",
             "notificacoesAtivas"  :   "${this.notificacoesAtivas}",
             "somNotificacao"  :   "${this.somNotificacao}"
         }`
@@ -49,6 +52,7 @@ export class Usuario {
             modoInterface: this.modoInterface,
             tamanhoFonte: this.tamanhoFonte,
             idosoPodeGerenciarMedicamentos: this.idosoPodeGerenciarMedicamentos,
+            idosoPodeEditarExcluirMedicamentos: this.idosoPodeEditarExcluirMedicamentos,
             notificacoesAtivas: this.notificacoesAtivas,
             somNotificacao: this.somNotificacao
         }

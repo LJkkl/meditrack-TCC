@@ -36,9 +36,15 @@ export default function PerfilMedicamento() {
   const [proximasDoses, setProximasDoses] = useState<HistoricoItem[]>([]);
   const [loading, setLoading] = useState(true);
   const { fontScale } = useTamanhoFonte();
-  const { usuarioSelecionadoId, usuarioSelecionadoNome, visualizandoVinculado } = useVinculosIdoso();
+  const {
+    usuarioSelecionadoId,
+    usuarioSelecionadoNome,
+    visualizandoVinculado,
+    tipoUsuario,
+  } = useVinculosIdoso();
 
   const uid = usuarioSelecionadoId;
+  const podeEditarExcluir = tipoUsuario !== 'idoso' || medicamento.idosoPodeEditarExcluir === true;
 
   // 🔥 BUSCAR RECEITUARIO MAIS RECENTE
   useEffect(() => {
@@ -98,6 +104,10 @@ export default function PerfilMedicamento() {
   // 🗑 APAGAR
   const apagar = async () => {
     if (!uid) return;
+    if (!podeEditarExcluir) {
+      Alert.alert('Bloqueado', 'A edição e exclusão de medicamentos estão desativadas nesta conta.');
+      return;
+    }
 
     Alert.alert(
       "Confirmar",
@@ -383,39 +393,41 @@ export default function PerfilMedicamento() {
         )}
       </CartaoBase>
 
-      <View style={{ flexDirection: 'row', marginTop: 16, gap: 10 }}>
-        <TouchableOpacity
-          onPress={() => navigation.navigate('EditarMedicamento', { medId: medicamento.id })}
-          style={{
-            flex: 1,
-            backgroundColor: '#0b3954',
-            borderRadius: 16,
-            paddingVertical: 15,
-            alignItems: 'center',
-          }}
-        >
-          <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: fontScale.button }}>
-            Editar
-          </Text>
-        </TouchableOpacity>
+      {podeEditarExcluir && (
+        <View style={{ flexDirection: 'row', marginTop: 16, gap: 10 }}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('EditarMedicamento', { medId: medicamento.id })}
+            style={{
+              flex: 1,
+              backgroundColor: '#0b3954',
+              borderRadius: 16,
+              paddingVertical: 15,
+              alignItems: 'center',
+            }}
+          >
+            <Text style={{ color: '#ffffff', fontWeight: '700', fontSize: fontScale.button }}>
+              Editar
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={apagar}
-          style={{
-            flex: 1,
-            backgroundColor: '#fdeaea',
-            borderRadius: 16,
-            paddingVertical: 15,
-            alignItems: 'center',
-            borderWidth: 1,
-            borderColor: '#f3c7c7',
-          }}
-        >
-          <Text style={{ color: '#b3261e', fontWeight: '700', fontSize: fontScale.button }}>
-            Apagar
-          </Text>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity
+            onPress={apagar}
+            style={{
+              flex: 1,
+              backgroundColor: '#fdeaea',
+              borderRadius: 16,
+              paddingVertical: 15,
+              alignItems: 'center',
+              borderWidth: 1,
+              borderColor: '#f3c7c7',
+            }}
+          >
+            <Text style={{ color: '#b3261e', fontWeight: '700', fontSize: fontScale.button }}>
+              Apagar
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </TelaBase>
   );
 }

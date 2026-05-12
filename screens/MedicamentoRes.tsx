@@ -37,6 +37,13 @@ export default function MedicamentoRes() {
     try {
       const ref = firestore.collection('Usuario').doc(uid);
 
+      await ref.collection('Med').doc(medicamento.id).set(
+        {
+          idosoPodeEditarExcluir: visualizandoVinculado ? receituario.idosoPodeEditarExcluir === true : true,
+        },
+        { merge: true }
+      );
+
       const receituariosSnap = await ref
         .collection('Receituario')
         .where('medId', '==', medicamento.id)
@@ -173,6 +180,12 @@ export default function MedicamentoRes() {
         <Text style={{ color: theme.colors.text, fontSize: fontScale.body }}>
           Inicio: {formatarDataHoraBR(receituario.dataInicio)}
         </Text>
+
+        {visualizandoVinculado && (
+          <Text style={{ color: theme.colors.text, fontSize: fontScale.body }}>
+            Idoso pode editar/excluir: {receituario.idosoPodeEditarExcluir ? 'Sim' : 'Não'}
+          </Text>
+        )}
 
         <Text style={{ color: theme.colors.primary, fontSize: fontScale.sectionTitle, fontWeight: '700', marginTop: 20 }}>
           Proximas doses

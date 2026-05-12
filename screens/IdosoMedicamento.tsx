@@ -76,6 +76,7 @@ export default function IdosoMedicamento() {
           nomeComercial: nomeLimpo,
           tipoApresentacao: tipoLimpo,
           principioAtivo: principioLimpo,
+          idosoPodeEditarExcluir: true,
           criadoEm: medExistenteSnap.empty ? Date.now() : (medExistenteSnap.docs[0].data().criadoEm ?? Date.now()),
         },
         { merge: true }

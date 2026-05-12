@@ -15,6 +15,7 @@ type ContextoVinculos = {
   tipoUsuario: TipoUsuario;
   codigoVinculo: string;
   idosoPodeGerenciarMedicamentos: boolean;
+  idosoPodeEditarExcluirMedicamentos: boolean;
   notificacoesAtivas: boolean;
   somNotificacao: SomNotificacao;
   usuarioSelecionadoId: string | null;
@@ -26,6 +27,7 @@ type ContextoVinculos = {
   gerarNovoCodigo: () => Promise<string>;
   desvincularIdoso: (idosoId: string) => Promise<void>;
   atualizarPermissaoGerenciarMedicamentos: (permitir: boolean) => Promise<void>;
+  atualizarPermissaoEditarExcluirMedicamentos: (permitir: boolean) => Promise<void>;
   atualizarNotificacoesAtivas: (ativas: boolean) => Promise<void>;
   atualizarSomNotificacao: (som: SomNotificacao) => Promise<void>;
 };
@@ -39,6 +41,7 @@ export function VinculosIdosoProvider({ children }: { children: React.ReactNode 
   const [tipoUsuario, setTipoUsuario] = useState<TipoUsuario>("idoso");
   const [codigoVinculo, setCodigoVinculo] = useState("");
   const [idosoPodeGerenciarMedicamentos, setIdosoPodeGerenciarMedicamentos] = useState(false);
+  const [idosoPodeEditarExcluirMedicamentos, setIdosoPodeEditarExcluirMedicamentos] = useState(false);
   const [notificacoesAtivas, setNotificacoesAtivas] = useState(true);
   const [somNotificacao, setSomNotificacao] = useState<SomNotificacao>("padrao");
   const [usuarioLogadoId, setUsuarioLogadoId] = useState<string | null>(null);
@@ -68,6 +71,7 @@ export function VinculosIdosoProvider({ children }: { children: React.ReactNode 
         setTipoUsuario("idoso");
         setCodigoVinculo("");
         setIdosoPodeGerenciarMedicamentos(false);
+        setIdosoPodeEditarExcluirMedicamentos(false);
         setNotificacoesAtivas(true);
         setVinculados([]);
         return;
@@ -93,6 +97,7 @@ export function VinculosIdosoProvider({ children }: { children: React.ReactNode 
         const tipo = data.tipo === "idoso" ? "idoso" : "normal";
         setTipoUsuario(tipo);
         setIdosoPodeGerenciarMedicamentos(data.idosoPodeGerenciarMedicamentos === true);
+        setIdosoPodeEditarExcluirMedicamentos(data.idosoPodeEditarExcluirMedicamentos === true);
         setNotificacoesAtivas(data.notificacoesAtivas !== false);
         const somSalvo = data.somNotificacao;
         if (somSalvo === "suave" || somSalvo === "alerta" || somSalvo === "padrao") {
@@ -209,6 +214,22 @@ export function VinculosIdosoProvider({ children }: { children: React.ReactNode 
       .set({ idosoPodeGerenciarMedicamentos: permitir }, { merge: true });
 
     setIdosoPodeGerenciarMedicamentos(permitir);
+
+    if (!permitir) {
+      await atualizarPermissaoEditarExcluirMedicamentos(false);
+    }
+  };
+
+  const atualizarPermissaoEditarExcluirMedicamentos = async (permitir: boolean) => {
+    const uid = auth.currentUser?.uid;
+    if (uid == null) throw new Error("Usuario nao autenticado.");
+
+    await firestore
+      .collection("Usuario")
+      .doc(uid)
+      .set({ idosoPodeEditarExcluirMedicamentos: permitir }, { merge: true });
+
+    setIdosoPodeEditarExcluirMedicamentos(permitir);
   };
 
   const atualizarNotificacoesAtivas = async (ativas: boolean) => {
@@ -264,6 +285,7 @@ export function VinculosIdosoProvider({ children }: { children: React.ReactNode 
       tipoUsuario,
       codigoVinculo,
       idosoPodeGerenciarMedicamentos,
+      idosoPodeEditarExcluirMedicamentos,
       notificacoesAtivas,
       somNotificacao,
       usuarioSelecionadoId,
@@ -275,6 +297,7 @@ export function VinculosIdosoProvider({ children }: { children: React.ReactNode 
       gerarNovoCodigo,
       desvincularIdoso,
       atualizarPermissaoGerenciarMedicamentos,
+      atualizarPermissaoEditarExcluirMedicamentos,
       atualizarNotificacoesAtivas,
       atualizarSomNotificacao,
     };
@@ -283,6 +306,7 @@ export function VinculosIdosoProvider({ children }: { children: React.ReactNode 
     tipoUsuario,
     codigoVinculo,
     idosoPodeGerenciarMedicamentos,
+    idosoPodeEditarExcluirMedicamentos,
     notificacoesAtivas,
     somNotificacao,
     usuarioSelecionadoId,
