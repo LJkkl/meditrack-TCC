@@ -2,6 +2,7 @@
   "expo": {
     "name": "Meditrack",
     "slug": "meditrack",
+    "scheme": "meditrack",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/capaIcon.png",
@@ -20,6 +21,9 @@
       "permissions": [
         "POST_NOTIFICATIONS",
         "SCHEDULE_EXACT_ALARM",
+        "USE_FULL_SCREEN_INTENT",
+        "WAKE_LOCK",
+        "DISABLE_KEYGUARD",
         "VIBRATE"
       ],
       "adaptiveIcon": {
@@ -38,6 +42,7 @@
           ]
         }
       ],
+      "./plugins/withMeditrackAlarm",
       "@react-native-community/datetimepicker"
     ],
     "web": {

@@ -24,21 +24,21 @@ const FONT_SCALES: Record<FontSizeOption, FontScale> = {
     sectionTitle: 17,
     body: 14,
     caption: 12,
-    button: 16,
+    button: 15,
   },
   Medio: {
     title: 32,
     sectionTitle: 24,
     body: 19,
     caption: 15,
-    button: 22,
+    button: 16,
   },
   Grande: {
     title: 38,
     sectionTitle: 28,
     body: 22,
     caption: 17,
-    button: 26,
+    button: 18,
   },
 };
 

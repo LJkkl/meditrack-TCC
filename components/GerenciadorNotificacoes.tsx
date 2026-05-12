@@ -1,8 +1,12 @@
 import { useEffect, useRef } from "react";
-import { AppState } from "react-native";
+import { AppState, Linking } from "react-native";
 import { auth } from "../firebase";
 import {
+  ACTION_ADIAR_DOSE_5_MIN,
+  ACTION_TOMAR_DOSE,
+  adiarDoseNotificadaCincoMinutos,
   ensureNotificationPermissionsAsync,
+  marcarDoseNotificadaComoTomada,
   notificacoesSuportadas,
   syncDoseNotificationsForUser,
   syncLinkedDoseNotificationsForUser,
@@ -31,6 +35,44 @@ function navigateToHistorico(targetUserId?: string, targetUserName?: string, fal
   run();
 }
 
+function payloadFromAlarmUrl(url: string) {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== "meditrack:" || parsed.hostname !== "dose-action") {
+      return null;
+    }
+
+    const action = parsed.pathname.replace("/", "");
+    if (action !== "tomar") {
+      return null;
+    }
+
+    const source = parsed.searchParams.get("source");
+    const historicoId = parsed.searchParams.get("historicoId");
+    const nomeMed = parsed.searchParams.get("nomeMed") || "Medicamento";
+    const previstoPara = Number(parsed.searchParams.get("previstoPara") || Date.now());
+    const medId = parsed.searchParams.get("medId") || undefined;
+
+    if (source === "dose_reminder") {
+      const uid = parsed.searchParams.get("uid");
+      if (!uid || !historicoId) return null;
+      return { source, uid, historicoId, medId, previstoPara, nomeMed };
+    }
+
+    if (source === "linked_dose_reminder") {
+      const caregiverUid = parsed.searchParams.get("caregiverUid");
+      const elderlyUid = parsed.searchParams.get("elderlyUid");
+      const elderlyName = parsed.searchParams.get("elderlyName") || "Idoso";
+      if (!caregiverUid || !elderlyUid || !historicoId) return null;
+      return { source, caregiverUid, elderlyUid, elderlyName, historicoId, medId, previstoPara, nomeMed };
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+}
+
 export default function GerenciadorNotificacoes() {
   const { selecionarUsuario } = useVinculosIdoso();
   const lastHandledResponseId = useRef<string | null>(null);
@@ -55,13 +97,20 @@ export default function GerenciadorNotificacoes() {
       clearLinkedHistoryUnsubs();
     };
 
-    const scheduleSync = (runner: () => Promise<void>) => {
+    const scheduleSync = () => {
       if (syncTimer) {
         clearTimeout(syncTimer);
       }
 
       syncTimer = setTimeout(() => {
-        runner().catch((error) => {
+        if (!usuarioAtualId) {
+          return;
+        }
+
+        Promise.all([
+          syncDoseNotificationsForUser(usuarioAtualId),
+          syncLinkedDoseNotificationsForUser(usuarioAtualId),
+        ]).catch((error) => {
           console.log(error);
         });
       }, 400);
@@ -91,10 +140,7 @@ export default function GerenciadorNotificacoes() {
         .doc(user.uid)
         .onSnapshot(
           () => {
-            scheduleSync(async () => {
-              await syncDoseNotificationsForUser(user.uid);
-              await syncLinkedDoseNotificationsForUser(user.uid);
-            });
+            scheduleSync();
           },
           (error) => {
             console.log(error);
@@ -107,9 +153,7 @@ export default function GerenciadorNotificacoes() {
         .collection("Historico")
         .onSnapshot(
           () => {
-            scheduleSync(async () => {
-              await syncDoseNotificationsForUser(user.uid);
-            });
+            scheduleSync();
           },
           (error) => {
             console.log(error);
@@ -122,9 +166,7 @@ export default function GerenciadorNotificacoes() {
         .collection("Vinculados")
         .onSnapshot(
           (snapshot) => {
-            scheduleSync(async () => {
-              await syncLinkedDoseNotificationsForUser(user.uid);
-            });
+            scheduleSync();
 
             clearLinkedHistoryUnsubs();
 
@@ -135,9 +177,7 @@ export default function GerenciadorNotificacoes() {
                 .collection("Historico")
                 .onSnapshot(
                   () => {
-                    scheduleSync(async () => {
-                      await syncLinkedDoseNotificationsForUser(user.uid);
-                    });
+                    scheduleSync();
                   },
                   (error) => {
                     console.log(error);
@@ -161,6 +201,16 @@ export default function GerenciadorNotificacoes() {
       const data = response.notification.request.content.data as any;
       const currentUid = auth.currentUser?.uid;
 
+      if (response.actionIdentifier === ACTION_TOMAR_DOSE) {
+        void marcarDoseNotificadaComoTomada(data).catch((error) => console.log(error));
+        return;
+      }
+
+      if (response.actionIdentifier === ACTION_ADIAR_DOSE_5_MIN) {
+        void adiarDoseNotificadaCincoMinutos(data).catch((error) => console.log(error));
+        return;
+      }
+
       if (data?.source === "linked_dose_reminder" && typeof data.elderlyUid === "string") {
         selecionarUsuario(data.elderlyUid, typeof data.elderlyName === "string" ? data.elderlyName : "Idoso");
         navigateToHistorico(data.elderlyUid, data.elderlyName);
@@ -173,25 +223,34 @@ export default function GerenciadorNotificacoes() {
       }
     };
 
+    const handleUrl = (url: string | null) => {
+      if (!url) {
+        return;
+      }
+
+      const payload = payloadFromAlarmUrl(url);
+      if (!payload) {
+        return;
+      }
+
+      void marcarDoseNotificadaComoTomada(payload).catch((error) => console.log(error));
+    };
+
     const response = Notifications.getLastNotificationResponse();
     if (response) {
       handleNotificationResponse(response);
     }
 
+    Linking.getInitialURL().then(handleUrl).catch(console.log);
+
     const responseSubscription = Notifications.addNotificationResponseReceivedListener(handleNotificationResponse);
+    const linkingSubscription = Linking.addEventListener("url", ({ url }) => handleUrl(url));
     const appStateSubscription = AppState.addEventListener("change", (state) => {
       if (state !== "active" || !usuarioAtualId) {
         return;
       }
 
-      scheduleSync(async () => {
-        if (!usuarioAtualId) {
-          return;
-        }
-
-        await syncDoseNotificationsForUser(usuarioAtualId);
-        await syncLinkedDoseNotificationsForUser(usuarioAtualId);
-      });
+      scheduleSync();
     });
 
     return () => {
@@ -200,6 +259,7 @@ export default function GerenciadorNotificacoes() {
       }
       clearAllDataSubscriptions();
       responseSubscription.remove();
+      linkingSubscription.remove();
       appStateSubscription.remove();
       unsubscribe();
     };

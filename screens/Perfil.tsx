@@ -160,7 +160,7 @@ export default function Perfil({ navigation }: PerfilProps) {
 
     const codigo = codigoParaVincular.trim();
     if (codigo.length < 4) {
-      Alert.alert("Codigo invalido", "Digite um codigo valido para vincular.");
+      Alert.alert("Código inválido", "Digite um código válido para vincular.");
       return;
     }
 
@@ -169,9 +169,9 @@ export default function Perfil({ navigation }: PerfilProps) {
       const vinculado = await vincularPorCodigo(codigo);
       void syncLinkedDoseNotificationsForCurrentUser().catch(console.log);
       setCodigoParaVincular("");
-      Alert.alert("Vinculo criado", `Agora voce pode visualizar ${vinculado.nome} na Home.`);
+      Alert.alert("Vínculo criado", `Agora você pode visualizar ${vinculado.nome} na Home.`);
     } catch (error: any) {
-      Alert.alert("Nao foi possivel vincular", error?.message || "Tente novamente.");
+      Alert.alert("Não foi possível vincular", error?.message || "Tente novamente.");
     } finally {
       setVinculando(false);
     }
@@ -183,9 +183,9 @@ export default function Perfil({ navigation }: PerfilProps) {
     try {
       setGerandoCodigo(true);
       const novoCodigo = await gerarNovoCodigo();
-      Alert.alert("Codigo atualizado", `Novo codigo: ${novoCodigo}`);
+      Alert.alert("Código atualizado", `Novo código: ${novoCodigo}`);
     } catch (error: any) {
-      Alert.alert("Erro", error?.message || "Nao foi possivel gerar um novo codigo.");
+      Alert.alert("Erro", error?.message || "Não foi possível gerar um novo código.");
     } finally {
       setGerandoCodigo(false);
     }
@@ -197,13 +197,13 @@ export default function Perfil({ navigation }: PerfilProps) {
 
       if (ativas) {
         if (!notificacoesSuportadas()) {
-          Alert.alert("Indisponivel", "As notificacoes locais nao funcionam no Expo Go. Use uma build instalada no aparelho.");
+          Alert.alert("Indisponível", "As notificações locais não funcionam no Expo Go. Use uma build instalada no aparelho.");
           return;
         }
 
         const granted = await ensureNotificationPermissionsAsync();
         if (!granted) {
-          Alert.alert("Permissao necessaria", "Ative a permissao de notificacoes no aparelho para continuar.");
+          Alert.alert("Permissão necessária", "Ative a permissão de notificações no aparelho para continuar.");
           return;
         }
       }
@@ -216,7 +216,7 @@ export default function Perfil({ navigation }: PerfilProps) {
         await cancelAllNotificationsForCurrentUser();
       }
     } catch (error: any) {
-      Alert.alert("Erro", error?.message || "Nao foi possivel atualizar as notificacoes.");
+      Alert.alert("Erro", error?.message || "Não foi possível atualizar as notificações.");
     } finally {
       setSalvandoNotificacoes(false);
     }
@@ -227,14 +227,14 @@ export default function Perfil({ navigation }: PerfilProps) {
       setSalvandoNotificacoes(true);
 
       if (!notificacoesSuportadas()) {
-        Alert.alert("Indisponivel", "A escolha de som vale para a build instalada no aparelho.");
+        Alert.alert("Indisponível", "A escolha de som vale para a build instalada no aparelho.");
         return;
       }
 
       if (notificacoesAtivas) {
         const granted = await ensureNotificationPermissionsAsync();
         if (!granted) {
-          Alert.alert("Permissao necessaria", "Ative a permissao de notificacoes no aparelho para continuar.");
+          Alert.alert("Permissão necessária", "Ative a permissão de notificações no aparelho para continuar.");
           return;
         }
       }
@@ -245,7 +245,7 @@ export default function Perfil({ navigation }: PerfilProps) {
         await syncAllNotificationsForCurrentUser();
       }
     } catch (error: any) {
-      Alert.alert("Erro", error?.message || "Nao foi possivel atualizar o som.");
+      Alert.alert("Erro", error?.message || "Não foi possível atualizar o som.");
     } finally {
       setSalvandoNotificacoes(false);
     }
@@ -263,7 +263,7 @@ export default function Perfil({ navigation }: PerfilProps) {
       const permissao = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
       if (!permissao.granted) {
-        Alert.alert("Permissao necessaria", "Precisamos de acesso a galeria para escolher sua foto.");
+        Alert.alert("Permissão necessária", "Precisamos de acesso à galeria para escolher sua foto.");
         return;
       }
 
@@ -296,7 +296,7 @@ export default function Perfil({ navigation }: PerfilProps) {
       );
     } catch (error) {
       console.log(error);
-      Alert.alert("Erro", "Nao foi possivel atualizar sua foto agora.");
+      Alert.alert("Erro", "Não foi possível atualizar sua foto agora.");
     } finally {
       setSalvandoFoto(false);
     }
@@ -381,7 +381,7 @@ export default function Perfil({ navigation }: PerfilProps) {
             <View style={[styles.settingsCard, styles.settingsCardFirst]}>
               <Text style={titleText(fontScale.sectionTitle)}>Preferencias de leitura</Text>
               <Text style={bodyText(fontScale.caption, "#5e7b89", { marginTop: 6, lineHeight: 20 })}>
-                Em breve voce podera aumentar o tamanho da fonte para facilitar a leitura em todo o aplicativo.
+                Em breve você poderá aumentar o tamanho da fonte para facilitar a leitura em todo o aplicativo.
               </Text>
 
               <View style={styles.settingsSegmented}>
@@ -402,14 +402,14 @@ export default function Perfil({ navigation }: PerfilProps) {
               </View>
 
               <Text style={bodyText(fontScale.caption, "#4d7182", { marginTop: 12 })}>
-                Opcao selecionada: {selectedFontSize}
+                Opção selecionada: {selectedFontSize}
               </Text>
             </View>
 
             <View style={styles.settingsCard}>
-              <Text style={titleText(fontScale.sectionTitle)}>Notificacoes</Text>
+              <Text style={titleText(fontScale.sectionTitle)}>Notificações</Text>
               <Text style={bodyText(fontScale.caption, "#5e7b89", { marginTop: 6, lineHeight: 20 })}>
-                Ative para receber avisos dos seus remedios e dos idosos vinculados.
+                Ative para receber avisos dos seus remédios e dos idosos vinculados.
               </Text>
 
               <View style={styles.settingsSegmented}>
@@ -440,7 +440,7 @@ export default function Perfil({ navigation }: PerfilProps) {
 
               <View style={styles.settingsSegmented}>
                 {([
-                  ["padrao", "Padrao"],
+                  ["padrao", "Padrão"],
                   ["suave", "Suave"],
                   ["alerta", "Alerta"],
                 ] as const).map(([valor, label]) => {
@@ -459,20 +459,20 @@ export default function Perfil({ navigation }: PerfilProps) {
               </View>
 
               <Text style={bodyText(fontScale.caption, "#4d7182", { marginTop: 12 })}>
-                Som selecionado: {somNotificacao === "padrao" ? "Padrao" : somNotificacao === "suave" ? "Suave" : "Alerta"}
+                Som selecionado: {somNotificacao === "padrao" ? "Padrão" : somNotificacao === "suave" ? "Suave" : "Alerta"}
               </Text>
             </View>
 
             <View style={styles.settingsCard}>
-              <Text style={titleText(fontScale.sectionTitle)}>Vinculo entre contas</Text>
+              <Text style={titleText(fontScale.sectionTitle)}>Vínculo entre contas</Text>
               <Text style={bodyText(fontScale.caption, "#5e7b89", { marginTop: 6, lineHeight: 20 })}>
-                Tipo da conta: {tipoUsuario === "idoso" ? "Idoso" : "Usuario normal"}.
+                Tipo da conta: {tipoUsuario === "idoso" ? "Idoso" : "Usuário normal"}.
               </Text>
 
               {tipoUsuario === "idoso" ? (
                 <>
                   <View style={styles.profileCodeBox}>
-                    <Text style={bodyText(fontScale.caption, "#4d7182")}>Codigo para vincular</Text>
+                    <Text style={bodyText(fontScale.caption, "#4d7182")}>Código para vincular</Text>
                     <Text style={titleText(fontScale.title, theme.colors.primary, { fontWeight: "800", letterSpacing: 2, marginTop: 6 })}>
                       {codigoVinculo || "------"}
                     </Text>
@@ -484,14 +484,14 @@ export default function Perfil({ navigation }: PerfilProps) {
                     style={[styles.profilePrimaryAction, buttonState(gerandoCodigo)]}
                   >
                     <Text style={inverseText(fontScale.button, { fontWeight: "700" })}>
-                      {gerandoCodigo ? "Gerando..." : "Gerar novo codigo"}
+                      {gerandoCodigo ? "Gerando..." : "Gerar novo código"}
                     </Text>
                   </TouchableOpacity>
                 </>
               ) : (
                 <>
                   <TextInput
-                    label="Codigo do idoso"
+                    label="Código do idoso"
                     value={codigoParaVincular}
                     onChangeText={(v) => setCodigoParaVincular(v.toUpperCase())}
                     autoCapitalize="characters"

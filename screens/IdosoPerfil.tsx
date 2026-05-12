@@ -196,7 +196,7 @@ export default function IdosoPerfil({ navigation }: Props) {
         </Text>
 
         <View style={styles.idosoCodeBox}>
-          <Text style={{ color: '#4d7182', fontSize: fontScale.caption }}>Seu codigo</Text>
+          <Text style={{ color: '#4d7182', fontSize: fontScale.caption }}>Seu código</Text>
           <Text style={{ color: theme.colors.primary, fontWeight: '800', fontSize: fontScale.title, letterSpacing: 2, marginTop: 6 }}>
             {codigoVinculo || '------'}
           </Text>
@@ -214,7 +214,7 @@ export default function IdosoPerfil({ navigation }: Props) {
       </CartaoBase>
 
       <CartaoBase style={[styles.idosoCard, { marginBottom: 14 }]}>
-        <Text style={{ color: theme.colors.text, fontSize: fontScale.sectionTitle, fontWeight: '700' }}>Notificacoes</Text>
+        <Text style={{ color: theme.colors.text, fontSize: fontScale.sectionTitle, fontWeight: '700' }}>Notificações</Text>
         <Text style={{ color: theme.colors.textMuted, fontSize: fontScale.body, marginTop: 8, lineHeight: 24 }}>
           Ative para receber avisos dos seus remédios no aparelho.
         </Text>
@@ -251,7 +251,7 @@ export default function IdosoPerfil({ navigation }: Props) {
 
         <View style={styles.idosoSegmented}>
           {([
-            ['padrao', 'Padrao'],
+            ['padrao', 'Padrão'],
             ['suave', 'Suave'],
             ['alerta', 'Alerta'],
           ] as const).map(([valor, label]) => {
@@ -275,7 +275,7 @@ export default function IdosoPerfil({ navigation }: Props) {
       <CartaoBase style={[styles.idosoCard, { marginBottom: 14 }]}>
         <Text style={{ color: theme.colors.text, fontSize: fontScale.sectionTitle, fontWeight: '700' }}>Adicionar remédio sozinho</Text>
         <Text style={{ color: theme.colors.textMuted, fontSize: fontScale.body, marginTop: 8, lineHeight: 24 }}>
-          Quando estiver ativado, aparece um botao para cadastrar medicamento e receituario basico.
+          Quando estiver ativado, aparece um botão para cadastrar medicamento e receituário básico.
         </Text>
 
         <View style={styles.idosoSegmented}>

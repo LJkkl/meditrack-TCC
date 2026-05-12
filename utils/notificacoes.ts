@@ -1,9 +1,13 @@
 import { Platform } from "react-native";
 import Constants from "expo-constants";
 import { auth, firestore } from "../firebase";
+import { cancelNativeDoseAlarmsForOwner, scheduleNativeDoseAlarm } from "./alarmesNativos";
 import { TOLERANCIA_ATRASO_MS } from "./doses";
 
 export type NotificationSoundPreference = "padrao" | "suave" | "alerta";
+export const DOSE_NOTIFICATION_CATEGORY_ID = "dose_actions";
+export const ACTION_TOMAR_DOSE = "tomar_dose";
+export const ACTION_ADIAR_DOSE_5_MIN = "adiar_dose_5_min";
 
 type DoseNotificationData = {
   source: "dose_reminder";
@@ -30,18 +34,14 @@ type NotificationsModule = typeof import("expo-notifications");
 let notificationsModule: NotificationsModule | null | undefined;
 const MARGEM_REAGENDAMENTO_MS = 15000;
 const DISPARO_MINIMO_A_PARTIR_DE_AGORA_MS = 2000;
-const ATRASO_AVISO_VINCULADO_MS = TOLERANCIA_ATRASO_MS;
-const MAX_DOSES_AGENDADAS = 64;
+const MAX_NOTIFICACOES_AGENDADAS = 64;
 const REFORCOS_LEMBRETE_MS = [0, TOLERANCIA_ATRASO_MS, 6 * 60 * 1000, 9 * 60 * 1000];
+const REFORCOS_CUIDADOR_MS = [0, TOLERANCIA_ATRASO_MS, 6 * 60 * 1000];
 const SOUND_CONFIG: Record<NotificationSoundPreference, { channelId: string; sound: "default" | "notificacao_suave.wav" | "notificacao_alerta.wav" }> = {
-  padrao: { channelId: "medicamentos-padrao-v2", sound: "default" },
-  suave: { channelId: "medicamentos-suave-v2", sound: "notificacao_suave.wav" },
-  alerta: { channelId: "medicamentos-alerta-v2", sound: "notificacao_alerta.wav" },
+  padrao: { channelId: "medicamentos-alarme-padrao-v3", sound: "default" },
+  suave: { channelId: "medicamentos-alarme-suave-v3", sound: "notificacao_suave.wav" },
+  alerta: { channelId: "medicamentos-alarme-alerta-v3", sound: "notificacao_alerta.wav" },
 };
-
-function isExpoGo() {
-  return Constants.appOwnership === "expo";
-}
 
 async function notificationsEnabledForUser(uid: string) {
   const doc = await firestore.collection("Usuario").doc(uid).get();
@@ -56,11 +56,6 @@ async function notificationSoundForUser(uid: string): Promise<NotificationSoundP
 
 function getNotificationsModule(): NotificationsModule | null {
   if (notificationsModule !== undefined) {
-    return notificationsModule;
-  }
-
-  if (isExpoGo()) {
-    notificationsModule = null;
     return notificationsModule;
   }
 
@@ -80,7 +75,10 @@ function getNotificationsModule(): NotificationsModule | null {
     notificationsModule = Notifications;
     return notificationsModule;
   } catch (error) {
-    console.log("Notificacoes locais indisponiveis neste ambiente.", error);
+    console.log("Notificacoes locais indisponiveis neste ambiente.", {
+      appOwnership: Constants.appOwnership,
+      error,
+    });
     notificationsModule = null;
     return notificationsModule;
   }
@@ -115,7 +113,32 @@ export async function ensureNotificationPermissionsAsync() {
 
 async function ensureNotificationChannelAsync() {
   const Notifications = getNotificationsModule();
-  if (!Notifications || Platform.OS !== "android") {
+  if (!Notifications) {
+    return;
+  }
+
+  await Notifications.setNotificationCategoryAsync(DOSE_NOTIFICATION_CATEGORY_ID, [
+    {
+      identifier: ACTION_TOMAR_DOSE,
+      buttonTitle: "Tomar",
+      options: {
+        opensAppToForeground: false,
+        isAuthenticationRequired: false,
+        isDestructive: false,
+      },
+    },
+    {
+      identifier: ACTION_ADIAR_DOSE_5_MIN,
+      buttonTitle: "Adiar 5 min",
+      options: {
+        opensAppToForeground: false,
+        isAuthenticationRequired: false,
+        isDestructive: false,
+      },
+    },
+  ]);
+
+  if (Platform.OS !== "android") {
     return;
   }
 
@@ -123,7 +146,7 @@ async function ensureNotificationChannelAsync() {
     (Object.entries(SOUND_CONFIG) as Array<[NotificationSoundPreference, { channelId: string; sound: "default" | "notificacao_suave.wav" | "notificacao_alerta.wav" }]>).map(
       async ([key, config]) => {
         await Notifications.setNotificationChannelAsync(config.channelId, {
-          name: `Lembretes de medicamentos - ${key}`,
+          name: `Alarmes de medicamentos - ${key}`,
           importance: Notifications.AndroidImportance.MAX,
           vibrationPattern: [0, 700, 250, 700, 250, 700],
           lightColor: "#0b3954",
@@ -182,7 +205,7 @@ async function getPendingDoseDocs(uid: string) {
     }))
     .filter((item) => (item.previstoPara ?? 0) >= Date.now() - MARGEM_REAGENDAMENTO_MS)
     .sort((a, b) => (a.previstoPara ?? 0) - (b.previstoPara ?? 0))
-    .slice(0, MAX_DOSES_AGENDADAS);
+    .slice(0, Math.max(1, Math.floor(MAX_NOTIFICACOES_AGENDADAS / REFORCOS_LEMBRETE_MS.length)));
 }
 
 async function cancelScheduledDoseNotificationsForUser(uid: string) {
@@ -198,6 +221,8 @@ async function cancelScheduledDoseNotificationsForUser(uid: string) {
       .filter((item) => isDoseReminder(item.content.data) && item.content.data.uid === uid)
       .map((item) => Notifications.cancelScheduledNotificationAsync(item.identifier))
   );
+
+  await cancelNativeDoseAlarmsForOwner(`dose:${uid}`).catch(console.log);
 }
 
 async function cancelScheduledLinkedDoseNotificationsForCaregiver(caregiverUid: string) {
@@ -213,6 +238,8 @@ async function cancelScheduledLinkedDoseNotificationsForCaregiver(caregiverUid: 
       .filter((item) => isLinkedDoseReminder(item.content.data) && item.content.data.caregiverUid === caregiverUid)
       .map((item) => Notifications.cancelScheduledNotificationAsync(item.identifier))
   );
+
+  await cancelNativeDoseAlarmsForOwner(`linked:${caregiverUid}`).catch(console.log);
 }
 
 export async function cancelDoseNotificationsForUser(uid?: string) {
@@ -273,16 +300,17 @@ export async function syncDoseNotificationsForUser(uid?: string) {
     pendentes.flatMap((dose) =>
       REFORCOS_LEMBRETE_MS.map((offsetMs) => Notifications.scheduleNotificationAsync({
         content: {
-          title: offsetMs === 0 ? "Hora do medicamento" : "Lembrete de medicamento",
+          title: offsetMs === 0 ? "Hora do medicamento" : "Medicamento ainda pendente",
           body: offsetMs === 0
             ? `${dose.nomeMed} precisa ser tomado agora.`
-            : `${dose.nomeMed} ainda nao foi registrado. Confira a dose.`,
+            : `${dose.nomeMed} ainda não foi registrado. Confira a dose.`,
           sound: soundConfig.sound,
           priority: Notifications.AndroidNotificationPriority.MAX,
           vibrate: [0, 700, 250, 700, 250, 700],
           autoDismiss: false,
-          sticky: offsetMs > 0,
+          sticky: true,
           interruptionLevel: "timeSensitive",
+          categoryIdentifier: DOSE_NOTIFICATION_CATEGORY_ID,
           data: {
             source: "dose_reminder",
             uid: resolvedUid,
@@ -298,6 +326,29 @@ export async function syncDoseNotificationsForUser(uid?: string) {
           channelId: Platform.OS === "android" ? soundConfig.channelId : undefined,
         },
       }))
+    )
+  );
+
+  await Promise.all(
+    pendentes.map((dose) =>
+      scheduleNativeDoseAlarm({
+        alarmId: `dose:${resolvedUid}:${dose.id}`,
+        ownerKey: `dose:${resolvedUid}`,
+        title: "Hora do medicamento",
+        body: `${dose.nomeMed} precisa ser tomado agora.`,
+        triggerAt: dose.previstoPara,
+        data: {
+          source: "dose_reminder",
+          uid: resolvedUid,
+          historicoId: dose.id,
+          medId: dose.medId,
+          previstoPara: dose.previstoPara,
+          nomeMed: dose.nomeMed,
+        },
+      }).catch((error) => {
+        console.log(error);
+        return false;
+      })
     )
   );
 }
@@ -339,37 +390,69 @@ export async function syncLinkedDoseNotificationsForUser(caregiverUid?: string) 
     })
   );
 
+  const notificacoesLimitadas = notificacoes
+    .flat()
+    .slice(0, Math.max(1, Math.floor(MAX_NOTIFICACOES_AGENDADAS / REFORCOS_CUIDADOR_MS.length)));
+
   await Promise.all(
-    notificacoes.flat().map(({ vinculado, dose }) =>
-      Notifications.scheduleNotificationAsync({
-        content: {
-          title: `Dose de ${vinculado.nome}`,
-          body: `${dose.nomeMed} pode estar atrasado. Verifique o tratamento.`,
-          sound: soundConfig.sound,
-          priority: Notifications.AndroidNotificationPriority.MAX,
-          vibrate: [0, 700, 250, 700],
-          interruptionLevel: "timeSensitive",
-          data: {
-            source: "linked_dose_reminder",
-            caregiverUid: resolvedUid,
-            elderlyUid: vinculado.id,
-            elderlyName: vinculado.nome,
-            historicoId: dose.id,
-            medId: dose.medId,
-            previstoPara: dose.previstoPara,
-            nomeMed: dose.nomeMed,
-          } satisfies LinkedDoseNotificationData,
+    notificacoesLimitadas
+      .flatMap(({ vinculado, dose }) =>
+        REFORCOS_CUIDADOR_MS.map((offsetMs) =>
+          Notifications.scheduleNotificationAsync({
+            content: {
+              title: offsetMs === 0 ? `Hora da dose de ${vinculado.nome}` : `Dose pendente de ${vinculado.nome}`,
+              body: offsetMs === 0
+                ? `${dose.nomeMed} deve ser tomado agora.`
+                : `${dose.nomeMed} ainda não foi registrado. Verifique o tratamento.`,
+              sound: soundConfig.sound,
+              priority: Notifications.AndroidNotificationPriority.MAX,
+              vibrate: [0, 700, 250, 700, 250, 700],
+              autoDismiss: false,
+              sticky: true,
+              interruptionLevel: "timeSensitive",
+              categoryIdentifier: DOSE_NOTIFICATION_CATEGORY_ID,
+              data: {
+                source: "linked_dose_reminder",
+                caregiverUid: resolvedUid,
+                elderlyUid: vinculado.id,
+                elderlyName: vinculado.nome,
+                historicoId: dose.id,
+                medId: dose.medId,
+                previstoPara: dose.previstoPara,
+                nomeMed: dose.nomeMed,
+              } satisfies LinkedDoseNotificationData,
+            },
+            trigger: {
+              type: Notifications.SchedulableTriggerInputTypes.DATE,
+              date: new Date(Math.max(dose.previstoPara + offsetMs, Date.now() + DISPARO_MINIMO_A_PARTIR_DE_AGORA_MS)),
+              channelId: Platform.OS === "android" ? soundConfig.channelId : undefined,
+            },
+          })
+        )
+      )
+  );
+
+  await Promise.all(
+    notificacoesLimitadas.map(({ vinculado, dose }) =>
+      scheduleNativeDoseAlarm({
+        alarmId: `linked:${resolvedUid}:${vinculado.id}:${dose.id}`,
+        ownerKey: `linked:${resolvedUid}`,
+        title: `Hora da dose de ${vinculado.nome}`,
+        body: `${dose.nomeMed} deve ser tomado agora.`,
+        triggerAt: dose.previstoPara,
+        data: {
+          source: "linked_dose_reminder",
+          caregiverUid: resolvedUid,
+          elderlyUid: vinculado.id,
+          elderlyName: vinculado.nome,
+          historicoId: dose.id,
+          medId: dose.medId,
+          previstoPara: dose.previstoPara,
+          nomeMed: dose.nomeMed,
         },
-        trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.DATE,
-          date: new Date(
-            Math.max(
-              dose.previstoPara + ATRASO_AVISO_VINCULADO_MS,
-              Date.now() + DISPARO_MINIMO_A_PARTIR_DE_AGORA_MS
-            )
-          ),
-          channelId: Platform.OS === "android" ? soundConfig.channelId : undefined,
-        },
+      }).catch((error) => {
+        console.log(error);
+        return false;
       })
     )
   );
@@ -387,4 +470,84 @@ export async function syncAllNotificationsForCurrentUser() {
 export async function cancelAllNotificationsForCurrentUser() {
   await cancelDoseNotificationsForUser(auth.currentUser?.uid);
   await cancelLinkedDoseNotificationsForUser(auth.currentUser?.uid);
+}
+
+export async function marcarDoseNotificadaComoTomada(data: unknown) {
+  const payload = isDoseReminder(data)
+    ? { uid: data.uid, historicoId: data.historicoId }
+    : isLinkedDoseReminder(data)
+      ? { uid: data.elderlyUid, historicoId: data.historicoId }
+      : null;
+
+  if (!payload) {
+    return false;
+  }
+
+  await firestore
+    .collection("Usuario")
+    .doc(payload.uid)
+    .collection("Historico")
+    .doc(payload.historicoId)
+    .update({
+      status: "tomado",
+      tomadoEm: Date.now(),
+    });
+
+  await syncDoseNotificationsForUser(payload.uid);
+
+  const caregiverUid = isLinkedDoseReminder(data) ? data.caregiverUid : auth.currentUser?.uid;
+  if (caregiverUid) {
+    await syncLinkedDoseNotificationsForUser(caregiverUid);
+  }
+
+  return true;
+}
+
+export async function adiarDoseNotificadaCincoMinutos(data: unknown) {
+  const Notifications = getNotificationsModule();
+  if (!Notifications) {
+    return false;
+  }
+
+  const payload = isDoseReminder(data) || isLinkedDoseReminder(data) ? data : null;
+  if (!payload) {
+    return false;
+  }
+
+  const uid = isLinkedDoseReminder(payload) ? payload.elderlyUid : payload.uid;
+  const enabled = await notificationsEnabledForUser(isLinkedDoseReminder(payload) ? payload.caregiverUid : uid);
+  if (!enabled) {
+    return false;
+  }
+
+  const granted = await ensureNotificationPermissionsAsync();
+  if (!granted) {
+    return false;
+  }
+
+  const soundPreference = await notificationSoundForUser(isLinkedDoseReminder(payload) ? payload.caregiverUid : uid);
+  const soundConfig = SOUND_CONFIG[soundPreference];
+  const nomeAlvo = isLinkedDoseReminder(payload) ? payload.elderlyName : undefined;
+
+  await Notifications.scheduleNotificationAsync({
+    content: {
+      title: nomeAlvo ? `Dose adiada de ${nomeAlvo}` : "Dose adiada",
+      body: `${payload.nomeMed} foi adiado por 5 minutos.`,
+      sound: soundConfig.sound,
+      priority: Notifications.AndroidNotificationPriority.MAX,
+      vibrate: [0, 700, 250, 700, 250, 700],
+      autoDismiss: false,
+      sticky: true,
+      interruptionLevel: "timeSensitive",
+      categoryIdentifier: DOSE_NOTIFICATION_CATEGORY_ID,
+      data: payload,
+    },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.DATE,
+      date: new Date(Date.now() + 5 * 60 * 1000),
+      channelId: Platform.OS === "android" ? soundConfig.channelId : undefined,
+    },
+  });
+
+  return true;
 }
